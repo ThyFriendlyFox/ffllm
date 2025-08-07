@@ -2,3 +2,4 @@
 {"epoch": 1, "loss": 6.117052343827259, "plausibility_acc": 0.5244}
 {"epoch": 0, "loss": 8.339719917200789, "plausibility_acc": 0.5112}
 {"epoch": 1, "loss": 6.224306643763675, "plausibility_acc": 0.5272}
+{"epoch": 0, "loss": 4.464049053192139, "plausibility_acc": 0.4866666666666667}

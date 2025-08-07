@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Unit + Integration + E2E (fast)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-timeout
+      - name: Lint
+        run: |
+          ruff --version
+          ruff . || true
+          black --check .
+      - name: Run unit/integration tests
+        run: |
+          pytest tests -q
+      - name: CLI batch smoke
+        run: |
+          python -m ffllm.cli.menu --action print-menu
+          python -m ffllm.cli.menu --action local --config configs/ci.yaml
+      - name: Generate benchmark report (fast)
+        run: |
+          python -m ffllm.benchmark.run_benchmark --config configs/ci.yaml
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffllm-artifacts-${{ matrix.os }}-${{ matrix.python-version }}
+          path: |
+            logs/**
+            benchmarks/**
+            AUTOLOG.md
+            configs/best.yaml
+          if-no-files-found: ignore
+      - name: Job summary
+        run: |
+          echo "## FF-LLM Fast Benchmark" >> $GITHUB_STEP_SUMMARY
+          if [ -f benchmarks/report.md ]; then cat benchmarks/report.md >> $GITHUB_STEP_SUMMARY; fi
+
+  benchmark:
+    name: Extended Benchmark
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-timeout
+      - name: Run extended benchmark
+        env:
+          OMP_NUM_THREADS: 2
+        run: |
+          python -m ffllm.benchmark.run_benchmark --config configs/ci.yaml
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffllm-artifacts-benchmark
+          path: |
+            logs/**
+            benchmarks/**
+            AUTOLOG.md
+            configs/best.yaml
+          if-no-files-found: ignore
+      - name: Job summary
+        run: |
+          echo "## FF-LLM Extended Benchmark" >> $GITHUB_STEP_SUMMARY
+          if [ -f benchmarks/report.md ]; then cat benchmarks/report.md >> $GITHUB_STEP_SUMMARY; fi
