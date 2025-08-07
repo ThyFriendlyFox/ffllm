@@ -1,0 +1,44 @@
+model:
+  vocab_size: 256
+  d_model: 128
+  n_heads: 4
+  n_layers: 2
+  ffw_hidden: 256
+  max_seq_len: 64
+  activation_bits: 4
+  ternary_threshold: 0.05
+  goodness_threshold: 2.0
+
+training:
+  batch_size: 64
+  lr: 0.001
+  epochs: 2
+  device: cpu
+
+forward_forward:
+  goodness_fn: sumsq
+
+data:
+  num_sequences: 5000
+  seq_len: 32
+  vocab_size: 256
+  corruption_rate: 0.15
+
+federated:
+  rounds: 2
+  clients_per_round: 2
+  total_clients: 4
+  local_epochs: 1
+
+privacy:
+  dp_sigma: 0.01
+  clip_norm: 1.0
+  secure_aggregation: false
+
+compression:
+  weight_bits: 2
+  activation_bits: 4
+  top_k: 0.2
+
+optuna:
+  n_trials: 5
